@@ -41,6 +41,12 @@ module RestfulRoutes
   
   GMAPS_API_KEY = 'ABQIAAAAh6iKXeHf6uR8To-PqSTlFhT2yXp_ZAY8_ufC3CFXhHIE1NvwkxT4tDxF0QqxuHMk6f9VGUGAUsDvQw'
 
+  #Aunque google map ya soporta rutas a pie la api no tiene esta funcionalidad todavía.
+  #En la siguiente dirección avisan de que ya la tienen preparada pero no la han puesto en producción todavía:
+  #    http://code.google.com/p/gmaps-api-issues/issues/detail?id=195#c22
+  #
+  #Una vez puesta en producción esta funcionalidad solo habría que cambiar esta constante para que la
+  #aplicación sirva rutas a pie.
   GMAPS_WALKING_DIRECTIONS_AVAILABLE = false
 
 end
