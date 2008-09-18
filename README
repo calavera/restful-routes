@@ -1,0 +1,129 @@
+== Restful Routes
+
+  Restful Routes es una prueba de concepto para una empresa de taxis y una aplicación de envío de rutas mediante mms. Al final del documento se especifican todos los casos de uso de la aplicación en función del sms que envía el usuario.
+
+=== Petición de taxis por sms
+
+  Bajo mi punto de vista, los servicios de taxi por teléfono están obsoletos. 
+
+  Esta aplicación permite localizar a un usuario que envía un sms a un número determinado y mediante la api de direcciones de google maps extraer el tiempo que le costaría llegar a un taxi situado en unas coordenadas a la posición del usuario. Debido a que este tiempo de espera puede varias en función de la disponibilidad y la distancia de los taxis, el sistema le propone al cliente unos determinados sitios donde poder esperar tranquilamente.
+
+  Ya que no se puede disponer de datos reales de gps de un servicio de taxis se ha optado por simularlos. 
+
+  Mediante un algoritmo de aproximación por coordenadas, una vez localizado al usuario se supone una área con un radio determinado y se extraen una serie de coordenadas aleatorias dentro de este area. Estas coordenadas se envían al servicio de rutas de google maps y se selecciona la más cercana al usuario. Independientemente, se hace una petición a la api de 11870.com para extraer los servicios cercanos al usuario que esta web nos propone con una serie de etiquetas ("tapas", "bar", "comer", "cañas"...). Una vez obtenidos todos los datos el sistema crea y envía un mms mediante la api de mms de movistar al usuario con el tiempo que va a tener que esperar, los servicios cercanos propuestos por 11870.com y un mapa creado con la api de mapas estáticos de google maps donde se indica la posición de estos servicios.
+
+  Adicionalmente, se indica al usuario como usar el apartado de rutas para que pueda llegar caminando a su destino si tener que esperar al taxi.
+
+===  Petición de rutas para llegar a un destino determinado
+
+  La aplicación también es capaz de enviar una ruta determinada desde el punto donde está situado el usuario al destino donde quiere llegar. Una vez localizado el usuario y su destino se extrae la ruta mediante la api de direcciones de google maps. 
+
+  Además, la aplicación sugiere al usuario una serie de puntos donde poder descansar tranquilamente en medio del camino. Estos puntos son sitio o servicios extraidos de 11870.com mediante su api. Ya que google maps nos muestra la ruta como una sucesión de pasos situados entre dos puntos, se ha utilizado un algoritmo para extraer el punto intermedio entre estos dos y poder mostrar servicios dentro de toda la ruta del usuario.
+
+  Una vez que se ha obtenido la ruta y los servicios cercanos donde descansar, el sistema le envía un mms al usuario con toda la información mediante el api de mms de movistar. Este mms incluye varios mapas generados con la api de mapas estáticos de google maps. La primera página de mms corresponde a un resumen de la ruta con un mapa donde se puede ver el recorrido completo que tiene que hacer el usuario, mientras que en el resto de páginas del mms se detallan los pasos que nos da google maps con un mapa indicando el punto inicial, el punto final y los servicios que 11870.com nos ha propuesto alrededor de la ruta.
+  
+  La api de envío de mms de movistar limita a 5 el número de páginas que podemos añadir a un mms, así que los pasos que nos envía google maps se compactan para que quepan dentro de 4 páginas, por ejemplo, si recibimos ocho pasos en lugar de pintarlos uno a uno se unen de dos en dos para crear solo cuatro páginas.
+
+=== Localizando al usuario
+
+  Se han implementado varios métodos para localizar al usuario.
+
+  El más sencillo consiste en que el usuario envía en el cuerpo de sms su dirección exacta junto a una palabra clave y el sistema mediante la api de geocoding de google maps lo localiza.
+
+  El segundo se realiza mediante la api Localizame de Movistar. Si el usuario envía la palabra clave #loc seguido del código que el servicio Localizame le ha proporcinado el sistema se autoriza directamente para poder localizar al usuario, en caso de no recibir el código se supone que el usuario ya nos ha autorizado y el sistema intenta encontrar su posición. El número de teléfono que el usuario debe autorizar es el 650075813. Ya que este servicio usa coordenadas UTM se ha implementado un algoritmo para transformarlas en coordenadas geográficas con puntos de latitud y longitud.
+
+  Por último, y bajo mi punto de vista el método más interesante, se ha implementado un servicio de localización mediante la api del servicio FireEagle de yahoo(http://fireeagle.yahoo.net). Este servicio permite a los usuarios de yahoo marcar su localización mediante su web o distintas aplicaciones desarrolladas, incluidas varias para móviles. Si el usuario concede privilegios a nuestra aplicación para acceder a su cuenta de fireeagle, esta es capaz de localizarlo mediante la api que yahoo provee. La concesión de privilegios se hace en dos pasos:
+
+    1. El usuario envía un sms con la palabra "fireeagle" seguida de la palabra "register" para informar a nuestra aplicación que le va a conceder acceso a su cuenta. La aplicación le envía un sms al usuario, mediante la api de envío de sms de Movistar, con la url de fireeagle a la que se tiene que dirigir para confirmar este acceso. Dado que las direcciones de fireeagle son muy largas se usan las apis de "is.gd"(http://is.gd) y "tinyurl"(http://tinyurl.com) para acortarlas. 
+
+    2. Una vez que el usuario ha accedido a la dirección correspondiente de fireeagle y a confirmado que nos da acceso tiene que enviar otro sms para que nosotros confirmemos que el acceso es correcto. Este sms debe incluir la palabra clave "fireeagle" seguida de la palabra "access".
+
+  Una vez realizados estos dos sencillos pasos, cada vez que el usuario nos envíe un sms, buscaremos la posición más exacta que el usuario tiene dentro de fireeagle y la utilizaremos para posicionarlo.
+
+=== Casos de uso
+
+  Para simular la recepción de sms que envía el usuario se está haciendo uso de la api de recepción de sms de Movistar. El número de pruebas asignado es el 638444908, con lo que todos los sms enviados a ese número serán redirigidos a una dirección de correo electrónico que nosotros checkeamos para extraer estos sms.
+
+==== Opciones del servicio de taxi:
+
+  1. El usuario envía un sms con la dirección exacta donde se encuentra:
+
+        Texto del sms de ejemplo: TAXI #FROM virgen de los peligros 3, madrid
+
+  2. El usuario envía un sms con la clave que el servicio Localizame de Movistar le ha asignado:
+
+        Texto del sms de ejemplo: TAXI #LOC 445634
+
+  3. El usuario está registrado en el servicio fireeagle de yahoo y nos ha dado acceso de localización en su cuenta:
+
+        Texto del sms de ejemplo: TAXI
+
+
+==== Opciones del servicio de rutas:
+
+  1. El usuario envía la dirección exacta donde se encuenta y a donde quiere ir:
+
+        Texto del sms de ejemplo: WALK #FROM virgen de los peligros 3, madrid #TO divino pastor 10, madrid
+
+  2. El usuario envía la dirección a donde quiere ir y la clave del servicio Localizame de Movistar:
+
+        Texto del sms de ejemplo: WALK #TO divino pastor 10, madrid #LOC 234345
+
+  3. El usuario está registrado en fireeagle donde nos ha dado acceso y envía únicamente la dirección a donde quiere ir:
+
+        Texto del sms de ejemplo: WALK #TO divino mastor 10, madrid
+
+
+==== Opciones del servicio de localización con fireeagle:
+
+  1. El usuario quiere darnos acceso a su cuenta de fireeagle y manda un sms para notificarnoslo:
+
+        Texto del sms de ejemplo: FIREEAGLE REGISTER
+
+     Nosotros le enviamos un sms con una dirección similar a esta: http://is.gd/2aQX
+
+  2. El usuario ha accedido a la dirección que le hemos enviado y nos ha concedido el acceso, ahora nos lo tiene que notificar:
+
+        Texto del sms de ejemplo: FIREEAGLE ACCESS
+
+        
+=== Notas sobre el desarrollo, tecnologías utilizadas, apis...
+
+  La aplicación ha sido desarrollada con el lenguaje de programación Ruby(http://ruby-lang.org). Mediante tareas Rake(http://rake.rubyforge.org) y RubyGems(http://rubygems.org) la instalación y configuración de la aplicación es tan sencilla como ejecutar "rake setup" desde la línea de comando, una vez que están instaladas estas dos herramientas. Con esto se instalarán todas las dependencias.
+
+  Se usan las apis de FireEagle(http://fireeagle.yahoo.net) y de 11870.com(http://11870.com) para la localización del usuario y de servicios recomendados cercanos a él. Ambas aplicaciones proporcinan librerías de acceso que facilitan su integración. Además, se usan varias de las apis de Google Maps(http:code.google.com/apis/maps):
+
+      - La api de rutas y direcciones, para buscar la ruta a la dirección de destino del usuario o la ruta más corta entre el usuario y cada unos de los taxis.
+      - La api de geocoding, para localizar al usuario si este nos envía la dirección exacta en la que se encuentra.
+      - La api de mapas estáticos, para enviar los datos de las rutas y servicios ofrecidos por 11870.com al usuario.
+
+  Se usan distintas api de Movistar para interacción con el usuario:
+
+      - La api de recepción de sms, para recibir los sms de los usuarios a través de un correo electrónico.
+      - La api del servicio Localízame, para buscar la posición exacta del usuario. El usuario debe autorizar al número 650075813 o enviar el código que el servicio le ha proporcionado para que la aplicación pueda autorizarse y localizarlo.
+      - La api de envío de sms, para notificar eventos al usuario, por ejemplo, la dirección de registro de la aplicación en fireeagle o problemas al intentar localizarlo.
+      - La api de envío de mms, para enviar las rutas y mensajes de espera de taxi al usuario.
+
+  También se usan varias librerías empaquetadas como gemas:
+
+      - Json: esta librería se usa para parsear las respuestas de fireeagle o google maps con formato JSON.
+      - Tmail: esta librería se usa para manejar correctamente los emails que se reciben desde la api de recepción de sms vía mail.
+      - Daemons: esta librería se usa para hacer que la aplicación sea ejecutada como un demonio del sistema operativo.
+      - Fireeagle: esta gema se usa para establecer comunicación con la api de Fire Eagle.
+      - Oos4ruby: esta gema se usa para establecer comunicación con la api de 11870.com. Aunque no se ha desarrollado específicamente para el proyecto, si que se hemos corregido varios errores que se han detectado al usarla en este proyecto.
+      - Mechanize: esta gema se usa para establecer comunicación con la api de envío de mms. Aunque está desarrollada por terceras partes, se ha hecho un fork que corrige varios bugs que hemos detectado y están a la espera de introducción en la rama principal del proyecto.
+      
+  La aplicación está estructurada en varios directorios:
+  
+      - base: en el directorio raiz se encuentra el script que lanza la aplicación "runner.rb" y el módulo base que carga todas las clases "taxi.rb".
+      - lib: en este directorio se encuentran las clases que necesita la aplicación.
+      - lib/gps: aqui se encuentran las clases que localizan las coordenadas de los taxis.
+      - lib/locator: aqui se encuentran las distintas clases usadas para localizar al usuario, google maps, fire eagle y localizame.
+      - lib/smpp: en este directorio están las clases empleadas para envío de sms y mms.
+      - test: directorio donde se encuentran los test de la aplicación.
+      
+  Para ejecutar la aplicación en modo debug hay que ejecutar el siguiente comando desde la directorio raiz de la aplicación:
+        
+          ruby runner.rb run
+  
+  Este demonio comprueba el correo donde se reciben los sms cada cierto tiempo e intenta parsear cada uno de los que recibe siguiendo los casos de uso que se han detallado anteriormente.
