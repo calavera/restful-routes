@@ -3,6 +3,10 @@ require 'rake/testtask'
 require 'rake/rdoctask'
 require 'rake/gempackagetask'
 
+gem 'ci_reporter'
+require 'ci/reporter/rake/test_unit' # use this if you're using Test::Unit
+
+
 DEPENDENCIES = []
 DEPENDENCIES << Gem::Dependency.new('json', '>=1.1.3')
 DEPENDENCIES << Gem::Dependency.new('fireeagle', '>=0.8')
@@ -30,7 +34,7 @@ end
 
 desc 'Install the required dependencies'
 task :setup do
-  sh "#{'sudo ' unless Gem.win_platform?}gem sources -a http://gems.github.com"
+#  sh "#{'sudo ' unless Gem.win_platform?}gem sources -a http://gems.github.com"
 
   installed = Gem::SourceIndex.from_installed_gems
   DEPENDENCIES.select { |dep|
@@ -42,7 +46,7 @@ end
 
 desc "Run code-coverage analysis using rcov"
 task :coverage do
-  install_gem('rcov') if Gem::SourceIndex.from_installed_gems.search('rcov').empty?
+  install_gem('rcov', '-s http://gem.github.com') if Gem::SourceIndex.from_installed_gems.search('rcov').empty?
   rm_rf "coverage"
   system "rcov --sort coverage -Ilib #{TEST_FILES.join(' ')}"
 end
