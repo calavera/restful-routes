@@ -34,7 +34,6 @@ end
 
 desc 'Install the required dependencies'
 task :setup do
-#  sh "#{'sudo ' unless Gem.win_platform?}gem sources -a http://gems.github.com"
 
   installed = Gem::SourceIndex.from_installed_gems
   DEPENDENCIES.select { |dep|
